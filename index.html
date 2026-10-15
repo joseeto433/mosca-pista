@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <title>Mosca Pista</title>
+    <!-- iPhone y Android: sin zoom, ocupando también la zona de la muesca; se puede agregar a la pantalla de inicio (pantalla completa) -->
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Mosca Pista">
+    <meta name="theme-color" content="#0b0d10">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="TemplateData/icono.png">
+    <link rel="icon" type="image/png" href="TemplateData/icono.png">
+    <link rel="stylesheet" href="TemplateData/estilo.css">
+  </head>
+  <body>
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
+
+    <div id="carga">
+      <div class="marca">MOSCA <b>PISTA</b></div>
+      <div class="sub">Monza · F1 2012</div>
+      <div class="barra"><div id="barra-llena"></div></div>
+      <div id="estado">Cargando…</div>
+      <div id="consejo"></div>
+    </div>
+
+    <div id="girar">
+      <div class="telefono"></div>
+      <div>Gira el teléfono para jugar</div>
+    </div>
+
+    <div id="error"></div>
+
+    <script>
+      var canvas = document.querySelector("#unity-canvas");
+      var ua = navigator.userAgent;
+      var esIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      var esMovil = esIOS || /Android|Mobile/i.test(ua);
+      var instalado = window.navigator.standalone === true || window.matchMedia("(display-mode: fullscreen)").matches || window.matchMedia("(display-mode: standalone)").matches;
+      if (esMovil) document.body.classList.add("movil");
+
+      // consejos de la pantalla de carga
+      var consejo = document.querySelector("#consejo");
+      if (esIOS && !instalado)
+        consejo.innerHTML = "Para jugar a pantalla completa: botón <b>Compartir</b> → <b>Agregar a pantalla de inicio</b> y abre el juego desde ese ícono.";
+      else if (esMovil)
+        consejo.innerHTML = "Opciones → <b>Dirección táctil</b>: puedes girar inclinando el teléfono como un volante.";
+      else
+        consejo.innerHTML = "Teclado, mando o volante. C cambia de cámara, Esc abre el menú.";
+
+      function mensaje(msg, tipo) {
+        // los avisos de Unity (no los errores) se muestran unos segundos en la parte de abajo
+        var e = document.querySelector("#error");
+        e.innerHTML = msg;
+        e.className = tipo === "error" ? "visible fatal" : "visible";
+        if (tipo !== "error") setTimeout(function () { e.className = ""; }, 5000);
+      }
+
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/WebGL.loader.js";
+      var config = {
+        arguments: [],
+        dataUrl: buildUrl + "/WebGL.data.unityweb",
+        frameworkUrl: buildUrl + "/WebGL.framework.js.unityweb",
+        codeUrl: buildUrl + "/WebGL.wasm.unityweb",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "Mosca Pista",
+        productName: "Mosca Pista",
+        productVersion: "0.1.0",
+        showBanner: mensaje,
+        autoSyncPersistentDataPath: true,   // récords, reglajes y cerebros guardados quedan en el navegador
+      };
+
+      // Resolución: un iPhone tiene 3 píxeles por punto; dibujar a 3x es pesadísimo y no se nota en movimiento.
+      // Teléfonos a 1,5x, tabletas a 1,25x (pantalla grande, más píxeles) y la PC hasta 2x.
+      var dpr = window.devicePixelRatio || 1;
+      var tableta = esMovil && Math.min(screen.width, screen.height) >= 700;
+      config.devicePixelRatio = esMovil ? Math.min(dpr, tableta ? 1.25 : 1.5) : Math.min(dpr, 2);
+
+      // Gestos del navegador fuera: sin rebote al deslizar, sin zoom con dos dedos ni doble toque, sin menú al mantener
+      document.addEventListener("touchmove", function (e) { e.preventDefault(); }, { passive: false });
+      document.addEventListener("gesturestart", function (e) { e.preventDefault(); });
+      document.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+      // Primer toque: permiso del acelerómetro en iOS (para girar inclinando), pantalla completa y apaisado en Android
+      function primerToque() {
+        try {
+          if (typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function")
+            DeviceMotionEvent.requestPermission().catch(function () {});
+          if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function")
+            DeviceOrientationEvent.requestPermission().catch(function () {});
+        } catch (e) {}
+        if (esMovil && !esIOS && document.documentElement.requestFullscreen && !document.fullscreenElement) {
+          document.documentElement.requestFullscreen({ navigationUI: "hide" }).then(function () {
+            if (screen.orientation && screen.orientation.lock) screen.orientation.lock("landscape").catch(function () {});
+          }).catch(function () {});
+        }
+      }
+      document.addEventListener("touchend", primerToque, { once: true });
+      document.addEventListener("click", primerToque, { once: true });
+
+      // Mantener la pantalla encendida mientras se juega (donde el navegador lo permite)
+      var bloqueo = null;
+      function pedirPantalla() {
+        if ("wakeLock" in navigator && document.visibilityState === "visible")
+          navigator.wakeLock.request("screen").then(function (b) { bloqueo = b; }).catch(function () {});
+      }
+      document.addEventListener("visibilitychange", pedirPantalla);
+
+      var estado = document.querySelector("#estado");
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = function () {
+        createUnityInstance(canvas, config, function (p) {
+          document.querySelector("#barra-llena").style.width = (100 * p) + "%";
+          estado.textContent = p < .9 ? "Descargando… " + Math.round(p * 100) + " %" : "Preparando la pista…";
+        }).then(function (unity) {
+          document.querySelector("#carga").classList.add("oculta");
+          window.unityInstance = unity;
+          pedirPantalla();
+        }).catch(function (msg) {
+          mensaje("No se pudo abrir el juego: " + msg +
+                  (esIOS ? "<br><br>Cierra otras pestañas y apps y vuelve a intentar (Safari limita la memoria de cada página)." : ""), "error");
+        });
+      };
+      script.onerror = function () { mensaje("No se pudo descargar el juego. Revisa la conexión y recarga la página.", "error"); };
+      document.body.appendChild(script);
+    </script>
+  </body>
+</html>

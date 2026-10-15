@@ -1,0 +1,60 @@
+html, body {
+  margin: 0; padding: 0; width: 100%; height: 100%;
+  overflow: hidden; background: #0b0d10;
+  overscroll-behavior: none;
+  touch-action: none;
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #e8eaed;
+}
+/* el lienzo ocupa toda la ventana (dvh: en Safari la barra de direcciones no tapa el juego) */
+#unity-canvas {
+  position: fixed; left: 0; top: 0;
+  width: 100vw; height: 100vh; height: 100dvh;
+  display: block; background: #0b0d10;
+  outline: none;
+}
+
+/* pantalla de carga */
+#carga {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at 50% 40%, #1b2129 0%, #0b0d10 70%);
+  transition: opacity .5s;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  z-index: 5;
+}
+#carga.oculta { opacity: 0; pointer-events: none; }
+.marca { font-size: clamp(30px, 7vw, 64px); letter-spacing: .14em; font-weight: 300; }
+.marca b { font-weight: 800; color: #3a87fa; }
+.sub { margin-top: 6px; font-size: clamp(12px, 2.4vw, 16px); letter-spacing: .3em; text-transform: uppercase; color: #8a929c; }
+.barra { margin-top: 34px; width: min(70vw, 420px); height: 4px; border-radius: 2px; background: rgba(255,255,255,.1); overflow: hidden; }
+#barra-llena { height: 100%; width: 0; background: #3a87fa; transition: width .2s; }
+#estado { margin-top: 12px; font-size: 13px; color: #8a929c; font-variant-numeric: tabular-nums; }
+#consejo { margin-top: 26px; max-width: min(80vw, 520px); text-align: center; font-size: 13px; line-height: 1.5; color: #6c747e; }
+#consejo b { color: #c9ced4; font-weight: 600; }
+
+/* teléfono parado: pedir que lo giren (el juego es apaisado) */
+#girar {
+  position: fixed; inset: 0; display: none;
+  flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+  background: #0b0d10; z-index: 10; font-size: 17px; text-align: center; padding: 24px;
+}
+.telefono {
+  width: 46px; height: 80px; border: 3px solid #e8eaed; border-radius: 9px;
+  animation: girar 2.2s ease-in-out infinite;
+}
+@keyframes girar { 0%, 25% { transform: rotate(0); } 55%, 100% { transform: rotate(-90deg); } }
+@media (orientation: portrait) { body.movil #girar { display: flex; } }
+
+/* avisos y errores */
+#error {
+  position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  max-width: min(90vw, 560px); padding: 12px 16px; border-radius: 8px;
+  background: rgba(20,22,26,.95); border-left: 3px solid #ffd140;
+  font-size: 14px; line-height: 1.45; display: none; z-index: 20;
+}
+#error.visible { display: block; }
+#error.fatal { top: 50%; bottom: auto; transform: translate(-50%, -50%); border-left-color: #ee3a2c; }

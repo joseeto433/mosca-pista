@@ -1,0 +1,10 @@
+{
+  "name": "Mosca Pista",
+  "short_name": "Mosca Pista",
+  "start_url": "index.html",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0b0d10",
+  "theme_color": "#0b0d10",
+  "icons": [{ "src": "TemplateData/icono.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" }]
+}
